@@ -6,17 +6,19 @@ use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::models::Stats;
+
 pub async fn start_server(
     serve_addr: &str,
     frame_storage: Arc<Mutex<Option<Bytes>>>,
-    fps_storage: Arc<Mutex<u32>>,
+    stats_storage: Arc<Mutex<Stats>>,
 ) -> Result<(), Box<dyn Error>> {
     let make_svc = make_service_fn(move |_conn| {
         let frame_storage = Arc::clone(&frame_storage);
-        let fps_storage = Arc::clone(&fps_storage);
+        let stats_storage = Arc::clone(&stats_storage);
         async move {
             Ok::<_, hyper::Error>(service_fn(move |req| {
-                handle_request(req, Arc::clone(&frame_storage), Arc::clone(&fps_storage))
+                handle_request(req, Arc::clone(&frame_storage), Arc::clone(&stats_storage))
             }))
         }
     });
@@ -35,7 +37,7 @@ pub async fn start_server(
 async fn handle_request(
     req: Request<Body>,
     frame_storage: Arc<Mutex<Option<Bytes>>>,
-    fps_storage: Arc<Mutex<u32>>,
+    stats_storage: Arc<Mutex<Stats>>,
 ) -> Result<Response<Body>, hyper::Error> {
     match (req.method(), req.uri().path()) {
         (&hyper::Method::GET, "/frame") => {
@@ -59,8 +61,8 @@ async fn handle_request(
         }
         _ => {
             let fps = {
-                let fps_lock = fps_storage.lock().await;
-                *fps_lock
+                let stats = stats_storage.lock().await;
+                stats.frame_count
             };
 
             let response_body = json!({

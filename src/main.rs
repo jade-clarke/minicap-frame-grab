@@ -1,12 +1,15 @@
 use clap::Parser;
+use models::Stats;
 use std::error::Error;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Notify};
+use tokio::signal;
+use bytes::Bytes;
 
 mod minicap_client;
 mod server;
+mod models;
 
-use bytes::Bytes;
 use minicap_client::start_frame_reader;
 use server::start_server;
 
@@ -27,20 +30,54 @@ struct Args {
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
+    // Shared data for frame and FPS storage
     let latest_frame: Arc<Mutex<Option<Bytes>>> = Arc::new(Mutex::new(None));
-    let latest_fps: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
+    let latest_stats = Arc::new(Mutex::new(Stats {
+        frame_count: 0,
+        last_frame_time: std::time::Instant::now(),
+    }));
 
+    // Create a notify signal for shutdown
+    let shutdown_notify = Arc::new(Notify::new());
     let frame_storage = Arc::clone(&latest_frame);
-    let fps_storage = Arc::clone(&latest_fps);
     let connect_addr = args.connect_addr.clone();
+    let latest_stats_clone = Arc::clone(&latest_stats);
 
-    tokio::spawn(async move {
-        if let Err(e) = start_frame_reader(&connect_addr, frame_storage, fps_storage).await {
+    // Clone the shutdown notify for each task to avoid ownership issues
+    let shutdown_signal_frame_reader = Arc::clone(&shutdown_notify);
+    let shutdown_signal_server = Arc::clone(&shutdown_notify);
+
+    // Spawn the frame reader task
+    let frame_reader_handle = tokio::spawn(async move {
+        if let Err(e) = start_frame_reader(&connect_addr, frame_storage, latest_stats).await {
             eprintln!("Error reading frames: {}", e);
+            shutdown_signal_frame_reader.notify_waiters(); // Notify on error
         }
     });
 
-    start_server(&args.serve_addr, latest_frame, latest_fps).await?;
+    // Spawn the server task with graceful shutdown handling
+    let server_handle = tokio::spawn(async move {
+        if let Err(e) = start_server(&args.serve_addr, latest_frame, latest_stats_clone).await {
+            eprintln!("Error in server: {}", e);
+            shutdown_signal_server.notify_waiters(); // Notify on error
+        }
+    });
+
+    // Wait for either a signal or an error to occur
+    tokio::select! {
+        _ = frame_reader_handle => {
+            eprintln!("Frame reader task ended. Shutting down...");
+            shutdown_notify.notify_waiters();
+        }
+        _ = server_handle => {
+            eprintln!("Server task ended. Shutting down...");
+            shutdown_notify.notify_waiters();
+        }
+        _ = signal::ctrl_c() => {
+            eprintln!("Received CTRL+C. Shutting down...");
+            shutdown_notify.notify_waiters();
+        }
+    }
 
     Ok(())
 }

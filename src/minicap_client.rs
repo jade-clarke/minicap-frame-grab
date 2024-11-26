@@ -1,10 +1,11 @@
 use bytes::Bytes;
 use std::error::Error;
-use std::io::{self as std_io, Write};
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
+
+use crate::models::Stats;
 
 pub struct MinicapClient {
     stream: TcpStream,
@@ -54,7 +55,7 @@ impl MinicapClient {
 pub async fn start_frame_reader(
     connect_addr: &str,
     frame_storage: Arc<Mutex<Option<Bytes>>>,
-    fps_storage: Arc<Mutex<u32>>,
+    stats_storage: Arc<Mutex<Stats>>,
 ) -> Result<(), Box<dyn Error>> {
     let mut client = MinicapClient::new(connect_addr).await?;
 
@@ -74,13 +75,10 @@ pub async fn start_frame_reader(
         if elapsed >= 1.0 {
             // Update the fps value
             {
-                let mut fps = fps_storage.lock().await;
-                *fps = frame_count;
+                let mut stats = stats_storage.lock().await;
+                stats.frame_count = frame_count;
+                stats.last_frame_time = std::time::Instant::now();
             }
-
-            // Print the number of frames per second overwriting the previous line
-            print!("\rFrames per second: {}", frame_count);
-            std_io::stdout().flush().unwrap();
 
             frame_count = 0;
             start_time = tokio::time::Instant::now();
