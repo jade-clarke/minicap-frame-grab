@@ -2,59 +2,73 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frame Viewer</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-        }
-        canvas {
-            display: block;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frame Viewer</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #111;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
 </head>
 
 <body>
-    <canvas id="frameViewer"></canvas>
-    <script>
-        const imageUrl = "/frame";
-        const reloadInterval = 1000;
-        const aspectRatio = 13 / 6;
+  <canvas id="frameViewer"></canvas>
+  <script>
+    const imageUrl = "/frame";
+    const reloadInterval = 1000;
+    const aspectRatio = 13 / 6;
+    const timerHandler = null;
 
-        const canvas = document.getElementById('frameViewer');
-        const ctx = canvas.getContext('2d');
+    const canvas = document.getElementById('frameViewer');
+    const ctx = canvas.getContext('2d');
 
-        function reloadImage() {
-            const img = new Image();
+    function reloadImage() {
+      const img = new Image();
 
-            img.src = `${imageUrl}?timestamp=${new Date().getTime()}`;
+      img.src = `${imageUrl}?timestamp=${new Date().getTime()}`;
 
-            img.onload = () => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            };
+      img.onload = () => {
+        let tempAspectRatio = img.width / img.height;
+        if (tempAspectRatio !== aspectRatio) {
+          aspectRatio = tempAspectRatio;
+          resizeCanvas();
+        };
 
-            img.onerror = () => {
-                console.error("Failed to load image.");
-            };
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+
+      img.onerror = () => {
+        console.error("Failed to load image. Server might be down.");
+
+        if (timerHandler) {
+          clearInterval(timerHandler);
         }
+      };
+    }
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = canvas.width / aspectRatio;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = canvas.width / aspectRatio;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
-        window.addEventListener('resize', resizeCanvas);
-        setInterval(reloadImage, reloadInterval);
+    window.addEventListener('resize', resizeCanvas);
+    timerHandler = setInterval(reloadImage, reloadInterval);
 
-        reloadImage();
-        resizeCanvas();
-    </script>
+    reloadImage();
+    resizeCanvas();
+  </script>
 </body>
 
 </html>
