@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frame Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="frameViewer"></canvas>
+    <script>
+        const imageUrl = "/frame";
+        const reloadInterval = 1000;
+        const aspectRatio = 13 / 6;
+
+        const canvas = document.getElementById('frameViewer');
+        const ctx = canvas.getContext('2d');
+
+        function reloadImage() {
+            const img = new Image();
+
+            img.src = `${imageUrl}?timestamp=${new Date().getTime()}`;
+
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+
+            img.onerror = () => {
+                console.error("Failed to load image.");
+            };
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = canvas.width / aspectRatio;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        setInterval(reloadImage, reloadInterval);
+
+        reloadImage();
+        resizeCanvas();
+    </script>
+</body>
+
+</html>

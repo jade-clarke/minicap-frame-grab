@@ -8,6 +8,12 @@ use tokio::sync::Mutex;
 
 use crate::models::Stats;
 
+use rust_embed::RustEmbed;
+
+#[derive(RustEmbed)]
+#[folder = "static/"]
+struct Asset;
+
 pub async fn start_server(
     serve_addr: &str,
     frame_storage: Arc<Mutex<Option<Bytes>>>,
@@ -59,7 +65,7 @@ async fn handle_request(
                     .unwrap())
             }
         }
-        _ => {
+        (&hyper::Method::GET, "/status") => {
             let fps = {
                 let stats = stats_storage.lock().await;
                 stats.frame_count
@@ -79,5 +85,27 @@ async fn handle_request(
                 .body(Body::from(response_body))
                 .unwrap())
         }
+        (&hyper::Method::GET, path) => {
+            if let Some(content) = Asset::get(&path[1..]) {
+                // Remove leading '/'
+                let body = Body::from(content.data.into_owned());
+                let mime_type = mime_guess::from_path(path).first_or_octet_stream();
+                Ok(Response::builder()
+                    .status(StatusCode::OK)
+                    .header("Content-Type", mime_type.as_ref())
+                    .body(body)
+                    .unwrap())
+            } else {
+                // Return 404 Not Found
+                Ok(Response::builder()
+                    .status(StatusCode::NOT_FOUND)
+                    .body(Body::from("Not Found"))
+                    .unwrap())
+            }
+        }
+        _ => Ok(Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(Body::from("Not Found"))
+            .unwrap()),
     }
 }
