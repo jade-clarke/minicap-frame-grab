@@ -182,8 +182,8 @@ async fn handle_request(
                     .unwrap());
             }
 
-            Ok(Response::builder()
-            .status(StatusCode::NOT_FOUND)
+            return Ok(Response::builder()
+            .status(StatusCode::OK)
             .header("Content-Type", "application/json")
             .body(Body::from(
                 json!({

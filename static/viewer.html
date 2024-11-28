@@ -26,6 +26,7 @@
     const reloadInterval = 1000;
     let aspectRatio = 13 / 6;
     let timerHandler = null;
+    let debug = false;
 
     const canvas = document.getElementById('frameViewer');
     const ctx = canvas.getContext('2d');
@@ -63,6 +64,34 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
+    async function sendTapInput(event) {
+      // the img is stretched to fit the canvas, so we need to calculate the actual tap position
+      const x = event.offsetX * img.width / canvas.width;
+      const y = event.offsetY * img.height / canvas.height;
+
+      const data = {
+        "action": "tap",
+        "x": Math.round(x),
+        "y": Math.round(y)
+      };
+
+      const rawResponse = await fetch('/input', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      const response = await rawResponse.json();
+
+      if (debug) {
+        console.log(data, response);
+      }
+    }
+
+    canvas.addEventListener('click', sendTapInput);
     window.addEventListener('resize', resizeCanvas);
     timerHandler = setInterval(reloadImage, reloadInterval);
 
