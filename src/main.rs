@@ -1,14 +1,15 @@
+use adb_control::ADBControl;
+use bytes::Bytes;
 use clap::Parser;
 use models::Stats;
 use std::error::Error;
 use std::sync::Arc;
-use tokio::sync::{Mutex, Notify};
 use tokio::signal;
-use bytes::Bytes;
+use tokio::sync::{Mutex, Notify};
 
 mod minicap_client;
-mod server;
 mod models;
+mod server;
 
 use minicap_client::start_frame_reader;
 use server::start_server;
@@ -24,11 +25,19 @@ struct Args {
     /// The address to serve on (e.g., 127.0.0.1:3000)
     #[arg(short, long, default_value = "127.0.0.1:3000")]
     serve_addr: String,
+
+    /// The device name to connect to
+    #[arg(short, long, default_value = "")]
+    device_name: String,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
+    let adb_control = Arc::new(Mutex::new(ADBControl::new(
+        None,
+        Some(args.device_name.clone()),
+    )));
 
     // Shared data for frame and FPS storage
     let latest_frame: Arc<Mutex<Option<Bytes>>> = Arc::new(Mutex::new(None));
@@ -57,7 +66,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Spawn the server task with graceful shutdown handling
     let server_handle = tokio::spawn(async move {
-        if let Err(e) = start_server(&args.serve_addr, latest_frame, latest_stats_clone).await {
+        if let Err(e) = start_server(&args.serve_addr, latest_frame, latest_stats_clone, adb_control).await {
             eprintln!("Error in server: {}", e);
             shutdown_signal_server.notify_waiters(); // Notify on error
         }

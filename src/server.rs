@@ -1,3 +1,4 @@
+use adb_control::ADBControl;
 use bytes::Bytes;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server, StatusCode};
@@ -18,13 +19,15 @@ pub async fn start_server(
     serve_addr: &str,
     frame_storage: Arc<Mutex<Option<Bytes>>>,
     stats_storage: Arc<Mutex<Stats>>,
+    adb_control: Arc<Mutex<ADBControl>>,
 ) -> Result<(), Box<dyn Error>> {
     let make_svc = make_service_fn(move |_conn| {
         let frame_storage = Arc::clone(&frame_storage);
         let stats_storage = Arc::clone(&stats_storage);
+        let adb_control = Arc::clone(&adb_control);
         async move {
             Ok::<_, hyper::Error>(service_fn(move |req| {
-                handle_request(req, Arc::clone(&frame_storage), Arc::clone(&stats_storage))
+                handle_request(req, Arc::clone(&frame_storage), Arc::clone(&stats_storage), Arc::clone(&adb_control))
             }))
         }
     });
@@ -44,6 +47,7 @@ async fn handle_request(
     req: Request<Body>,
     frame_storage: Arc<Mutex<Option<Bytes>>>,
     stats_storage: Arc<Mutex<Stats>>,
+    adb_control: Arc<Mutex<ADBControl>>,
 ) -> Result<Response<Body>, hyper::Error> {
     match (req.method(), req.uri().path()) {
         (&hyper::Method::GET, "/frame") => {
@@ -105,6 +109,70 @@ async fn handle_request(
                     .body(Body::from("Not Found"))
                     .unwrap())
             }
+        }
+        (&hyper::Method::POST, "/input") => {
+            let body = hyper::body::to_bytes(req.into_body()).await?;
+            let body_str = std::str::from_utf8(&body).unwrap();
+            let json_body: serde_json::Value = serde_json::from_str(body_str).unwrap();
+
+            if !json_body.is_object() {
+                return Ok(Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .body(Body::from("Invalid JSON"))
+                    .unwrap());
+            }
+
+            // action key with the values of "tap", "swipe", "keyevent"
+            if let Some(action) = json_body.get("action") {
+                match action.as_str() {
+                    Some("tap") => {
+                        // x, y
+                        if let (Some(x), Some(y)) = (
+                            json_body.get("x").and_then(|x| x.as_u64()),
+                            json_body.get("y").and_then(|y| y.as_u64()),
+                        ) {
+                            let mut adb_control = adb_control.lock().await;
+                            let _ = adb_control.tap(x as i32, y as i32);
+                        }
+                    }
+                    Some("swipe") => {
+                        // x1, y1, x2, y2
+                        if let (Some(x1), Some(y1), Some(x2), Some(y2), Some(duration)) = (
+                            json_body.get("x1").and_then(|x1| x1.as_u64()),
+                            json_body.get("y1").and_then(|y1| y1.as_u64()),
+                            json_body.get("x2").and_then(|x2| x2.as_u64()),
+                            json_body.get("y2").and_then(|y2| y2.as_u64()),
+                            json_body.get("duration").and_then(|duration| duration.as_u64()),
+                        ) {
+                            let mut adb_control = adb_control.lock().await;
+                            let _ = adb_control.swipe(x1 as i32, y1 as i32, x2 as i32, y2 as i32, duration as i32);
+                        }
+                    }
+                    Some("keyevent") => {
+                        // key
+                        if let Some(key) = json_body.get("key").and_then(|key| key.as_u64()) {
+                            let mut adb_control = adb_control.lock().await;
+                            let _ = adb_control.keyevent(key as i32);
+                        }
+                    }
+                    _ => {
+                        return Ok(Response::builder()
+                            .status(StatusCode::BAD_REQUEST)
+                            .body(Body::from("Invalid action"))
+                            .unwrap());
+                    }
+                }
+            } else {
+                return Ok(Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .body(Body::from("Missing action"))
+                    .unwrap());
+            }
+
+            Ok(Response::builder()
+                .status(StatusCode::OK)
+                .body(Body::from("Valid JSON"))
+                .unwrap())
         }
         _ => Ok(Response::builder()
             .status(StatusCode::NOT_FOUND)
