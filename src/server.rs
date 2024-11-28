@@ -56,6 +56,9 @@ async fn handle_request(
                 Ok(Response::builder()
                     .status(StatusCode::OK)
                     .header("Content-Type", "image/jpeg")
+                    .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                    .header("Pragma", "no-cache")
+                    .header("Expires", "0")
                     .body(Body::from(frame_data))
                     .unwrap())
             } else {
