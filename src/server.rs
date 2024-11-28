@@ -27,7 +27,12 @@ pub async fn start_server(
         let adb_control = Arc::clone(&adb_control);
         async move {
             Ok::<_, hyper::Error>(service_fn(move |req| {
-                handle_request(req, Arc::clone(&frame_storage), Arc::clone(&stats_storage), Arc::clone(&adb_control))
+                handle_request(
+                    req,
+                    Arc::clone(&frame_storage),
+                    Arc::clone(&stats_storage),
+                    Arc::clone(&adb_control),
+                )
             }))
         }
     });
@@ -142,10 +147,18 @@ async fn handle_request(
                             json_body.get("y1").and_then(|y1| y1.as_u64()),
                             json_body.get("x2").and_then(|x2| x2.as_u64()),
                             json_body.get("y2").and_then(|y2| y2.as_u64()),
-                            json_body.get("duration").and_then(|duration| duration.as_u64()),
+                            json_body
+                                .get("duration")
+                                .and_then(|duration| duration.as_u64()),
                         ) {
                             let mut adb_control = adb_control.lock().await;
-                            let _ = adb_control.swipe(x1 as i32, y1 as i32, x2 as i32, y2 as i32, duration as i32);
+                            let _ = adb_control.swipe(
+                                x1 as i32,
+                                y1 as i32,
+                                x2 as i32,
+                                y2 as i32,
+                                duration as i32,
+                            );
                         }
                     }
                     Some("keyevent") => {
@@ -170,13 +183,25 @@ async fn handle_request(
             }
 
             Ok(Response::builder()
-                .status(StatusCode::OK)
-                .body(Body::from("Valid JSON"))
-                .unwrap())
+            .status(StatusCode::NOT_FOUND)
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                json!({
+                    "status": "success"
+                })
+                .to_string(),
+            ))
+            .unwrap())
         }
         _ => Ok(Response::builder()
             .status(StatusCode::NOT_FOUND)
-            .body(Body::from("Not Found"))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                json!({
+                    "error": "Not Found"
+                })
+                .to_string(),
+            ))
             .unwrap()),
     }
 }
