@@ -966,7 +966,7 @@ dependencies = [
 
 [[package]]
 name = "minicap-frame-grab"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "adb_control",
  "bytes",

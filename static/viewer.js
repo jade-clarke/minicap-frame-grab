@@ -6,14 +6,14 @@ let viewer = (function () {
   };
 
   const longPressThreshold = 300;
-  const reloadInterval = 1000;
-
+  let reloadInterval = 1000;
+  
   let initialized = false;
   let canvas = null;
   let ctx = null;
   let aspectRatio = 1;
   let img = null;
-
+  
   let running = false;
   let intervalHandler = null;
   let debug = false;
@@ -183,6 +183,7 @@ let viewer = (function () {
 
     setReloadInterval: (value) => {
       if (value > 100 && value < 2000) {
+        reloadInterval = value;
         clearInterval(intervalHandler);
         intervalHandler = setInterval(reloadImage, value);
       }
