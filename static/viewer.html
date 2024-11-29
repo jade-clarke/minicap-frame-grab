@@ -5,99 +5,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Frame Viewer</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background-color: #111;
-    }
-
-    canvas {
-      display: block;
-    }
-  </style>
+  <link rel="stylesheet" href="/viewer.css">
 </head>
 
 <body>
-  <canvas id="frameViewer"></canvas>
-  <script>
-    const imageUrl = "/frame";
-    const reloadInterval = 1000;
-    let aspectRatio = 13 / 6;
-    let timerHandler = null;
-    let debug = false;
-
-    const canvas = document.getElementById('frameViewer');
-    const ctx = canvas.getContext('2d');
-
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-
-    img.onload = () => {
-      const tempAspectRatio = img.width / img.height;
-      if (tempAspectRatio !== aspectRatio) {
-        aspectRatio = tempAspectRatio;
-        resizeCanvas();
-      }
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    };
-
-    img.onerror = () => {
-      console.error("Failed to load image. Server might be down.");
-      if (timerHandler) {
-        clearInterval(timerHandler);
-      }
-    };
-
-    function reloadImage() {
-      img.src = imageUrl;
-    }
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = canvas.width / aspectRatio;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "black";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-
-    async function sendTapInput(event) {
-      // the img is stretched to fit the canvas, so we need to calculate the actual tap position
-      const x = event.offsetX * img.width / canvas.width;
-      const y = event.offsetY * img.height / canvas.height;
-
-      const data = {
-        "action": "tap",
-        "x": Math.round(x),
-        "y": Math.round(y)
-      };
-
-      const rawResponse = await fetch('/input', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-
-      const response = await rawResponse.json();
-
-      if (debug) {
-        console.log(data, response);
-      }
-    }
-
-    canvas.addEventListener('click', sendTapInput);
-    window.addEventListener('resize', resizeCanvas);
-    timerHandler = setInterval(reloadImage, reloadInterval);
-
-    reloadImage();
-    setTimeout(resizeCanvas, 500);
-  </script>
+  <script src="/viewer.js"></script>
 </body>
 
 </html>

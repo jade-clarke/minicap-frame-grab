@@ -1,13 +1,10 @@
-use adb_control::ADBControl;
-use bytes::Bytes;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server, StatusCode};
 use serde_json::json;
 use std::error::Error;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
-use crate::models::Stats;
+use crate::models::AppState;
 
 use rust_embed::RustEmbed;
 
@@ -17,21 +14,16 @@ struct Asset;
 
 pub async fn start_server(
     serve_addr: &str,
-    frame_storage: Arc<Mutex<Option<Bytes>>>,
-    stats_storage: Arc<Mutex<Stats>>,
-    adb_control: Arc<Mutex<ADBControl>>,
+    app_state: Arc<AppState>,
 ) -> Result<(), Box<dyn Error>> {
+    let app_state_clone = Arc::clone(&app_state);
     let make_svc = make_service_fn(move |_conn| {
-        let frame_storage = Arc::clone(&frame_storage);
-        let stats_storage = Arc::clone(&stats_storage);
-        let adb_control = Arc::clone(&adb_control);
+        let app_state = Arc::clone(&app_state_clone);
         async move {
             Ok::<_, hyper::Error>(service_fn(move |req| {
                 handle_request(
                     req,
-                    Arc::clone(&frame_storage),
-                    Arc::clone(&stats_storage),
-                    Arc::clone(&adb_control),
+                    Arc::clone(&app_state),
                 )
             }))
         }
@@ -50,14 +42,12 @@ pub async fn start_server(
 
 async fn handle_request(
     req: Request<Body>,
-    frame_storage: Arc<Mutex<Option<Bytes>>>,
-    stats_storage: Arc<Mutex<Stats>>,
-    adb_control: Arc<Mutex<ADBControl>>,
+    app_state: Arc<AppState>,
 ) -> Result<Response<Body>, hyper::Error> {
     match (req.method(), req.uri().path()) {
         (&hyper::Method::GET, "/frame") => {
             let frame = {
-                let storage = frame_storage.lock().await;
+                let storage = app_state.frame_storage.lock().await;
                 storage.clone()
             };
 
@@ -79,7 +69,7 @@ async fn handle_request(
         }
         (&hyper::Method::GET, "/status") => {
             let fps = {
-                let stats = stats_storage.lock().await;
+                let stats = app_state.stats_storage.lock().await;
                 stats.frame_count
             };
 
@@ -136,8 +126,21 @@ async fn handle_request(
                             json_body.get("x").and_then(|x| x.as_u64()),
                             json_body.get("y").and_then(|y| y.as_u64()),
                         ) {
-                            let mut adb_control = adb_control.lock().await;
+                            let mut adb_control = app_state.adb_control.lock().await;
                             let _ = adb_control.tap(x as i32, y as i32);
+                        }
+                    }
+                    Some("long_tap") => {
+                        // x, y
+                        if let (Some(x), Some(y), Some(duration)) = (
+                            json_body.get("x").and_then(|x| x.as_u64()),
+                            json_body.get("y").and_then(|y| y.as_u64()),
+                            json_body
+                                .get("duration")
+                                .and_then(|duration| duration.as_u64()),
+                        ) {
+                            let mut adb_control = app_state.adb_control.lock().await;
+                            let _ = adb_control.long_tap(x as i32, y as i32, duration as i32);
                         }
                     }
                     Some("swipe") => {
@@ -151,7 +154,7 @@ async fn handle_request(
                                 .get("duration")
                                 .and_then(|duration| duration.as_u64()),
                         ) {
-                            let mut adb_control = adb_control.lock().await;
+                            let mut adb_control = app_state.adb_control.lock().await;
                             let _ = adb_control.swipe(
                                 x1 as i32,
                                 y1 as i32,
@@ -164,7 +167,7 @@ async fn handle_request(
                     Some("keyevent") => {
                         // key
                         if let Some(key) = json_body.get("key").and_then(|key| key.as_u64()) {
-                            let mut adb_control = adb_control.lock().await;
+                            let mut adb_control = app_state.adb_control.lock().await;
                             let _ = adb_control.keyevent(key as i32);
                         }
                     }

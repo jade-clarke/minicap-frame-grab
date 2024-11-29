@@ -1,7 +1,5 @@
 use adb_control::ADBControl;
-use bytes::Bytes;
 use clap::Parser;
-use models::Stats;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::signal;
@@ -34,39 +32,38 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    let adb_control = Arc::new(Mutex::new(ADBControl::new(
-        None,
-        Some(args.device_name.clone()),
-    )));
 
-    // Shared data for frame and FPS storage
-    let latest_frame: Arc<Mutex<Option<Bytes>>> = Arc::new(Mutex::new(None));
-    let latest_stats = Arc::new(Mutex::new(Stats {
-        frame_count: 0,
-        last_frame_time: std::time::Instant::now(),
-    }));
+    // initialize the AppState
+    let app_state = Arc::new(models::AppState {
+        frame_storage: Mutex::new(None),
+        stats_storage: Mutex::new(models::Stats {
+            frame_count: 0,
+            last_frame_time: std::time::Instant::now(),
+        }),
+        adb_control: Mutex::new(ADBControl::new(None, Some(args.device_name.clone()))),
+    });
 
     // Create a notify signal for shutdown
     let shutdown_notify = Arc::new(Notify::new());
-    let frame_storage = Arc::clone(&latest_frame);
     let connect_addr = args.connect_addr.clone();
-    let latest_stats_clone = Arc::clone(&latest_stats);
 
     // Clone the shutdown notify for each task to avoid ownership issues
     let shutdown_signal_frame_reader = Arc::clone(&shutdown_notify);
     let shutdown_signal_server = Arc::clone(&shutdown_notify);
 
     // Spawn the frame reader task
+    let frame_reader_state = app_state.clone();
     let frame_reader_handle = tokio::spawn(async move {
-        if let Err(e) = start_frame_reader(&connect_addr, frame_storage, latest_stats).await {
+        if let Err(e) = start_frame_reader(&connect_addr, frame_reader_state).await {
             eprintln!("Error reading frames: {}", e);
             shutdown_signal_frame_reader.notify_waiters(); // Notify on error
         }
     });
 
     // Spawn the server task with graceful shutdown handling
+    let server_handle_state = app_state.clone();
     let server_handle = tokio::spawn(async move {
-        if let Err(e) = start_server(&args.serve_addr, latest_frame, latest_stats_clone, adb_control).await {
+        if let Err(e) = start_server(&args.serve_addr, server_handle_state).await {
             eprintln!("Error in server: {}", e);
             shutdown_signal_server.notify_waiters(); // Notify on error
         }
