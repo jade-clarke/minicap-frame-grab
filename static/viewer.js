@@ -485,7 +485,7 @@ let viewer = (function () {
         delayedDisable(button, longpress.checked ? 2000 : 500);
         postInput({
           action: "keyevent",
-          key: key_select.value,
+          keycode: key_select.value,
           longpress: longpress.checked,
         });
       });

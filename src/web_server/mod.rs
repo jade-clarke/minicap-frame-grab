@@ -21,10 +21,7 @@ pub async fn start_server(
         let app_state = Arc::clone(&app_state_clone);
         async move {
             Ok::<_, hyper::Error>(service_fn(move |req| {
-                handle_request(
-                    req,
-                    Arc::clone(&app_state),
-                )
+                handle_request(req, Arc::clone(&app_state))
             }))
         }
     });
@@ -127,7 +124,7 @@ async fn handle_request(
                             json_body.get("y").and_then(|y| y.as_u64()),
                         ) {
                             let mut adb_control = app_state.adb_control.lock().await;
-                            let _ = adb_control.tap(x as i32, y as i32);
+                            let _ = adb_control.tap(x as u32, y as u32);
                         }
                     }
                     Some("long_tap") => {
@@ -140,7 +137,7 @@ async fn handle_request(
                                 .and_then(|duration| duration.as_u64()),
                         ) {
                             let mut adb_control = app_state.adb_control.lock().await;
-                            let _ = adb_control.long_tap(x as i32, y as i32, duration as i32);
+                            let _ = adb_control.long_tap(x as u32, y as u32, duration as u32);
                         }
                     }
                     Some("swipe") => {
@@ -156,19 +153,25 @@ async fn handle_request(
                         ) {
                             let mut adb_control = app_state.adb_control.lock().await;
                             let _ = adb_control.swipe(
-                                x1 as i32,
-                                y1 as i32,
-                                x2 as i32,
-                                y2 as i32,
-                                duration as i32,
+                                x1 as u32,
+                                y1 as u32,
+                                x2 as u32,
+                                y2 as u32,
+                                duration as u32,
                             );
                         }
                     }
                     Some("keyevent") => {
-                        // key
-                        if let Some(key) = json_body.get("key").and_then(|key| key.as_str()) {
+                        if let (Some(keycode), Some(longpress)) = (
+                            json_body
+                                .get("keycode")
+                                .and_then(|keycode| keycode.as_str()),
+                            json_body
+                                .get("longpress")
+                                .and_then(|longpress| longpress.as_bool()),
+                        ) {
                             let mut adb_control = app_state.adb_control.lock().await;
-                            let _ = adb_control.keyevent(key);
+                            let _ = adb_control.keyevent(keycode, longpress);
                         }
                     }
                     Some("text") => {
@@ -193,15 +196,15 @@ async fn handle_request(
             }
 
             return Ok(Response::builder()
-            .status(StatusCode::OK)
-            .header("Content-Type", "application/json")
-            .body(Body::from(
-                json!({
-                    "status": "success"
-                })
-                .to_string(),
-            ))
-            .unwrap())
+                .status(StatusCode::OK)
+                .header("Content-Type", "application/json")
+                .body(Body::from(
+                    json!({
+                        "status": "success"
+                    })
+                    .to_string(),
+                ))
+                .unwrap());
         }
         _ => Ok(Response::builder()
             .status(StatusCode::NOT_FOUND)
