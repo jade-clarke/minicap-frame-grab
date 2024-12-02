@@ -30,8 +30,8 @@ dependencies = [
 
 [[package]]
 name = "adb_control"
-version = "0.1.1"
-source = "git+https://github.com/jade-clarke/adb_control#98220cc69dc01dd77c9e83bae781c51a8c43942c"
+version = "0.2.0"
+source = "git+https://github.com/jade-clarke/adb_control#d8fb07bbd5146408e1c24fab4e3836e291afda72"
 dependencies = [
  "adb_client",
 ]
@@ -966,7 +966,7 @@ dependencies = [
 
 [[package]]
 name = "minicap-frame-grab"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "adb_control",
  "bytes",

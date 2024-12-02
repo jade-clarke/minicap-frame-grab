@@ -166,9 +166,9 @@ async fn handle_request(
                     }
                     Some("keyevent") => {
                         // key
-                        if let Some(key) = json_body.get("key").and_then(|key| key.as_u64()) {
+                        if let Some(key) = json_body.get("key").and_then(|key| key.as_str()) {
                             let mut adb_control = app_state.adb_control.lock().await;
-                            let _ = adb_control.keyevent(key as i32);
+                            let _ = adb_control.keyevent(key);
                         }
                     }
                     Some("text") => {
