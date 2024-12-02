@@ -175,7 +175,7 @@ async fn handle_request(
                         // text
                         if let Some(text) = json_body.get("text").and_then(|text| text.as_str()) {
                             let mut adb_control = app_state.adb_control.lock().await;
-                            let _ = adb_control.text(text);
+                            let _ = adb_control.text(text.into());
                         }
                     }
                     _ => {
