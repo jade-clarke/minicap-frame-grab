@@ -5,12 +5,12 @@ use std::sync::Arc;
 use tokio::signal;
 use tokio::sync::{Mutex, Notify};
 
-mod minicap_client;
 mod models;
-mod server;
+mod minicap_client;
+mod web_server;
 
 use minicap_client::start_frame_reader;
-use server::start_server;
+use web_server::start_server;
 
 /// A simple application to read frames from Minicap and serve them over HTTP.
 #[derive(Parser)]

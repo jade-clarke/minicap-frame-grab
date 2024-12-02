@@ -1,10 +1,90 @@
+:root {
+  --body-menu-padding: 10px;
+  --menu-background-color: lightgray;
+  --menu-accent-color: darkgray;
+  --menu-height: calc(3em);
+}
+
 body {
   margin: 0;
   padding: 0;
   overflow: hidden;
   background-color: #111;
+  height: 100%;
 }
 
 #viewer {
   display: block;
+}
+
+/* Canvas Styles */
+#myCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Set canvas size as needed */
+  width: 100%;
+  height: 100%;
+}
+
+/* Draggable Circle Styles */
+#menu {
+  display: grid;
+  overflow: hidden;
+  height: var(--menu-height);
+  line-height: var(--menu-height);
+  padding: 0;
+  margin: 0;
+  position: fixed;
+  border-radius: var(--menu-height);
+  background-color: var(--menu-background-color);
+  top: var(--body-menu-padding);
+  left: var(--body-menu-padding);
+  bottom: auto;
+  right: auto;
+  z-index: 1000;
+}
+
+#menu.open {
+  grid-template-columns: var(--menu-height) auto;
+}
+
+#menu.closed {
+  grid-template-columns: var(--menu-height) 0;
+}
+
+#toggle {
+  cursor: grab;
+  width: var(--menu-height);
+  height: var(--menu-height);
+  border-radius: var(--menu-height);
+}
+
+#toggle > svg {
+  fill: var(--menu-accent-color);
+}
+
+#controls {
+  margin-right: calc(var(--menu-height) / 2);
+  margin-left: calc(var(--menu-height) / 4);
+}
+
+#controls > * {
+  display: inline-block;
+}
+
+#controls div:nth-child(2) {
+  margin-left: calc(var(--menu-height) / 4);
+  border-left: 1px solid var(--menu-accent-color);
+  line-height: var(--menu-height);
+}
+
+#controls div:nth-child(2) > * {
+  margin-left: calc(var(--menu-height) / 4);
+  height: calc(var(--menu-height) / 1.5);
+  font-family: consolas, monospace;
+}
+
+.hidden {
+  display: none !important;
 }

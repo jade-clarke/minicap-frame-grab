@@ -171,6 +171,13 @@ async fn handle_request(
                             let _ = adb_control.keyevent(key as i32);
                         }
                     }
+                    Some("text") => {
+                        // text
+                        if let Some(text) = json_body.get("text").and_then(|text| text.as_str()) {
+                            let mut adb_control = app_state.adb_control.lock().await;
+                            let _ = adb_control.text(text);
+                        }
+                    }
                     _ => {
                         return Ok(Response::builder()
                             .status(StatusCode::BAD_REQUEST)
