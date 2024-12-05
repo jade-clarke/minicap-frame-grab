@@ -201,11 +201,10 @@ let viewer = (function () {
   let img = null;
 
   let running = false;
-  let intervalHandler = null;
   let debuggingEnabled = false;
 
-  let mouseDownStart = 0;
-  let mouseActing = false;
+  let canvasInputDownStart = 0;
+  let canvasInputActing = false;
 
   const root = document.querySelector(":root");
   let menu_div = null;
@@ -255,17 +254,14 @@ let viewer = (function () {
     };
 
     img.onerror = () => {
-      console.error("Failed to load image. Server might be down.");
-      if (intervalHandler) {
-        clearInterval(intervalHandler);
-        intervalHandler = null;
-        running = false;
-      }
+      console.error(
+        "Failed to load image. Server might be down or the URL might be invalid."
+      );
     };
 
-    canvas.addEventListener("mousedown", canvasHandleMouseDown);
-    canvas.addEventListener("mouseup", canvasHandleMouseUp);
-    canvas.addEventListener("mouseout", canvasHandleMouseOut);
+    canvas.addEventListener("pointerdown", canvasHandlePointerDown);
+    canvas.addEventListener("pointerup", canvasHandlePointerUp);
+    canvas.addEventListener("pointerout", canvasHandlePointerOut);
     window.addEventListener("resize", resizeCanvas);
 
     // Menu initialization
@@ -316,7 +312,7 @@ let viewer = (function () {
       e.stopPropagation();
     });
 
-    toggle_div.addEventListener("mousedown", menuHandleMouseDown);
+    toggle_div.addEventListener("pointerdown", menuHandlePointerDown);
 
     document.body.appendChild(menu_div);
 
@@ -326,13 +322,52 @@ let viewer = (function () {
   const start = () => {
     if (initialized && !running) {
       running = true;
-      intervalHandler = setInterval(reloadImage, reloadInterval);
       reloadImage();
     }
   };
 
   const reloadImage = async () => {
-    img.src = endpoint.frame;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      reloadInterval * 0.9
+    ); // Timeout slightly less than interval
+
+    try {
+      const response = await fetch(endpoint.frame, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch image: ${response.status} ${response.statusText}`
+        );
+      }
+      const blob = await response.blob();
+      const objectURL = URL.createObjectURL(blob);
+
+      if (img.src.startsWith("blob:")) {
+        URL.revokeObjectURL(img.src);
+      }
+
+      img.src = objectURL;
+
+      if (debuggingEnabled) {
+        console.log("Image updated at", new Date().toLocaleTimeString());
+      }
+    } catch (error) {
+      if (error.name === "AbortError") {
+        console.error("Image fetch aborted due to timeout.");
+      } else {
+        console.error("Error fetching image:", error);
+      }
+    } finally {
+      if (running) {
+        setTimeout(reloadImage, reloadInterval);
+      }
+    }
   };
 
   const resizeCanvas = () => {
@@ -343,21 +378,21 @@ let viewer = (function () {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
 
-  const canvasHandleMouseDown = (event) => {
+  const canvasHandlePointerDown = (event) => {
     event.preventDefault();
-    mouseDownStart = Date.now();
+    canvasInputDownStart = Date.now();
   };
 
-  const canvasHandleMouseUp = async (event) => {
+  const canvasHandlePointerUp = async (event) => {
     event.preventDefault();
-    if (mouseActing) {
+    if (canvasInputActing) {
       return;
     }
 
-    mouseActing = true;
+    canvasInputActing = true;
     try {
       const { x, y } = getPositionFromEvent(event);
-      const duration = Date.now() - mouseDownStart;
+      const duration = Date.now() - canvasInputDownStart;
       if (duration < longPressThreshold) {
         await postInput({
           action: "tap",
@@ -373,30 +408,30 @@ let viewer = (function () {
         });
       }
     } finally {
-      mouseDownStart = 0;
-      mouseActing = false;
+      canvasInputDownStart = 0;
+      canvasInputActing = false;
     }
   };
 
-  const canvasHandleMouseOut = (event) => {
+  const canvasHandlePointerOut = (event) => {
     event.preventDefault();
-    mouseDownStart = 0;
+    canvasInputDownStart = 0;
   };
 
-  const menuHandleMouseDown = (event) => {
+  const menuHandlePointerDown = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    downTime = new Date().getTime();
+    downTime = Date.now();
     isDragging = true;
     offsetX = event.clientX - menu_div.offsetLeft;
     offsetY = event.clientY - menu_div.offsetTop;
     toggle_div.style.cursor = "grabbing";
 
-    document.addEventListener("mousemove", menuOnMouseMove);
-    document.addEventListener("mouseup", menuOnMouseUp);
+    document.addEventListener("pointermove", menuOnPointerMove);
+    document.addEventListener("pointerup", menuOnPointerUp);
   };
 
-  const menuOnMouseMove = (event) => {
+  const menuOnPointerMove = (event) => {
     if (isDragging) {
       event.preventDefault();
       event.stopPropagation();
@@ -419,11 +454,12 @@ let viewer = (function () {
         ) + "px";
     }
   };
-  const menuOnMouseUp = (event) => {
+
+  const menuOnPointerUp = (event) => {
     event.preventDefault();
     event.stopPropagation();
 
-    if (new Date().getTime() - downTime < 250) {
+    if (Date.now() - downTime < 250) {
       toggle_svgs.forEach(function (svg) {
         classToggle(svg, "hidden");
       });
@@ -439,8 +475,8 @@ let viewer = (function () {
       isDragging = false;
       toggle_div.style.cursor = "grab";
 
-      document.removeEventListener("mousemove", menuOnMouseMove);
-      document.removeEventListener("mouseup", menuOnMouseUp);
+      document.removeEventListener("pointermove", menuOnPointerMove);
+      document.removeEventListener("pointerup", menuOnPointerUp);
     }
   };
 
@@ -448,21 +484,21 @@ let viewer = (function () {
     options: (() => {
       const div = document.createElement("div");
 
+      const debug_label = document.createElement("label");
+      debug_label.textContent = "Debug";
+      debug_label.htmlFor = "debug";
+
       const debugCheckbox = document.createElement("input");
       debugCheckbox.type = "checkbox";
       debugCheckbox.id = "debug";
       debugCheckbox.checked = debuggingEnabled;
-
-      const debug_label = document.createElement("label");
-      debug_label.textContent = "Debug";
-      debug_label.htmlFor = "debug";
 
       debugCheckbox.addEventListener("change", function (event) {
         event.preventDefault();
         debuggingEnabled = debugCheckbox.checked;
       });
 
-      div.appendChild(debugCheckbox);
+      debug_label.appendChild(debugCheckbox);
       div.appendChild(debug_label);
 
       return div;
@@ -473,6 +509,7 @@ let viewer = (function () {
       number.type = "number";
       number.min = 100;
       number.max = 2000;
+      number.step = 100;
       number.value = reloadInterval;
 
       const button = document.createElement("button");
@@ -486,11 +523,6 @@ let viewer = (function () {
           reloadInterval = clamp(value, 100, 2000);
           number.value = reloadInterval;
           delayedDisable(button, 2000);
-
-          if (intervalHandler) {
-            clearInterval(intervalHandler);
-          }
-          intervalHandler = setInterval(reloadImage, reloadInterval);
         }
       });
 
@@ -585,9 +617,10 @@ let viewer = (function () {
   };
 
   const getPositionFromEvent = (event) => {
+    const rect = canvas.getBoundingClientRect();
     return {
-      x: Math.round((event.offsetX * img.width) / canvas.width),
-      y: Math.round((event.offsetY * img.height) / canvas.height),
+      x: Math.round(((event.clientX - rect.left) * img.width) / canvas.width),
+      y: Math.round(((event.clientY - rect.top) * img.height) / canvas.height),
     };
   };
 
@@ -605,8 +638,6 @@ let viewer = (function () {
     stop: () => {
       if (running) {
         running = false;
-        clearInterval(intervalHandler);
-        intervalHandler = null;
       }
     },
 
