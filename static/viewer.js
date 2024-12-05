@@ -1,9 +1,15 @@
-DOMTokenList.prototype.toggle = function (token) {
-  if (this.contains(token)) {
-    this.remove(token);
+// Utility function for toggling a class
+const classToggle = (element, className) => {
+  if (element.classList.contains(className)) {
+    element.classList.remove(className);
   } else {
-    this.add(token);
+    element.classList.add(className);
   }
+};
+
+// Utility function for clamping a number
+const clamp = (number, min, max) => {
+  return Math.min(Math.max(number, min), max);
 };
 
 let viewer = (function () {
@@ -196,7 +202,7 @@ let viewer = (function () {
 
   let running = false;
   let intervalHandler = null;
-  let debug = false;
+  let debuggingEnabled = false;
 
   let mouseDownStart = 0;
   let mouseActing = false;
@@ -221,7 +227,7 @@ let viewer = (function () {
 
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("debug") === "true") {
-      debug = true;
+      debuggingEnabled = true;
     }
 
     // Canvas initialization
@@ -257,9 +263,9 @@ let viewer = (function () {
       }
     };
 
-    canvas.addEventListener("mousedown", canvas_handlers.handleMouseDown);
-    canvas.addEventListener("mouseup", canvas_handlers.handleMouseUp);
-    canvas.addEventListener("mouseout", canvas_handlers.handleMouseOut);
+    canvas.addEventListener("mousedown", canvasHandleMouseDown);
+    canvas.addEventListener("mouseup", canvasHandleMouseUp);
+    canvas.addEventListener("mouseout", canvasHandleMouseOut);
     window.addEventListener("resize", resizeCanvas);
 
     // Menu initialization
@@ -337,46 +343,44 @@ let viewer = (function () {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
 
-  const canvas_handlers = {
-    handleMouseDown: (event) => {
-      event.preventDefault();
-      mouseDownStart = Date.now();
-    },
+  const canvasHandleMouseDown = (event) => {
+    event.preventDefault();
+    mouseDownStart = Date.now();
+  };
 
-    handleMouseUp: async (event) => {
-      event.preventDefault();
-      if (mouseActing) {
-        return;
+  const canvasHandleMouseUp = async (event) => {
+    event.preventDefault();
+    if (mouseActing) {
+      return;
+    }
+
+    mouseActing = true;
+    try {
+      const { x, y } = getPositionFromEvent(event);
+      const duration = Date.now() - mouseDownStart;
+      if (duration < longPressThreshold) {
+        await postInput({
+          action: "tap",
+          x: x,
+          y: y,
+        });
+      } else {
+        await postInput({
+          action: "long_tap",
+          x: x,
+          y: y,
+          duration: duration,
+        });
       }
-
-      mouseActing = true;
-      try {
-        const { x, y } = getPositionFromEvent(event);
-        const duration = Date.now() - mouseDownStart;
-        if (duration < longPressThreshold) {
-          await postInput({
-            action: "tap",
-            x: x,
-            y: y,
-          });
-        } else {
-          await postInput({
-            action: "long_tap",
-            x: x,
-            y: y,
-            duration: duration,
-          });
-        }
-      } finally {
-        mouseDownStart = 0;
-        mouseActing = false;
-      }
-    },
-
-    handleMouseOut: (event) => {
-      event.preventDefault();
+    } finally {
       mouseDownStart = 0;
-    },
+      mouseActing = false;
+    }
+  };
+
+  const canvasHandleMouseOut = (event) => {
+    event.preventDefault();
+    mouseDownStart = 0;
   };
 
   const menuHandleMouseDown = (event) => {
@@ -421,10 +425,10 @@ let viewer = (function () {
 
     if (new Date().getTime() - downTime < 250) {
       toggle_svgs.forEach(function (svg) {
-        svg.classList.toggle("hidden");
+        classToggle(svg, "hidden");
       });
-      menu_div.classList.toggle("closed");
-      menu_div.classList.toggle("open");
+      classToggle(menu_div, "closed");
+      classToggle(menu_div, "open");
       root.style.setProperty(
         "--menu-controls-width",
         menu_div.classList.contains("closed") ? 0 : "auto"
@@ -435,12 +439,66 @@ let viewer = (function () {
       isDragging = false;
       toggle_div.style.cursor = "grab";
 
-      toggle_div.removeEventListener("mousemove", menuOnMouseMove);
-      toggle_div.removeEventListener("mouseup", menuOnMouseUp);
+      document.removeEventListener("mousemove", menuOnMouseMove);
+      document.removeEventListener("mouseup", menuOnMouseUp);
     }
   };
 
   const menu_controls = {
+    options: (() => {
+      const div = document.createElement("div");
+
+      const debugCheckbox = document.createElement("input");
+      debugCheckbox.type = "checkbox";
+      debugCheckbox.id = "debug";
+      debugCheckbox.checked = debuggingEnabled;
+
+      const debug_label = document.createElement("label");
+      debug_label.textContent = "Debug";
+      debug_label.htmlFor = "debug";
+
+      debugCheckbox.addEventListener("change", function (event) {
+        event.preventDefault();
+        debuggingEnabled = debugCheckbox.checked;
+      });
+
+      div.appendChild(debugCheckbox);
+      div.appendChild(debug_label);
+
+      return div;
+    })(),
+    refresh: (() => {
+      const div = document.createElement("div");
+      const number = document.createElement("input");
+      number.type = "number";
+      number.min = 100;
+      number.max = 2000;
+      number.value = reloadInterval;
+
+      const button = document.createElement("button");
+      button.textContent = "Update";
+      button.addEventListener("click", function (event) {
+        event.preventDefault();
+        let value = Number.parseInt(number.value, 10);
+        if (Number.isNaN(value)) {
+          number.value = reloadInterval;
+        } else {
+          reloadInterval = clamp(value, 100, 2000);
+          number.value = reloadInterval;
+          delayedDisable(button, 2000);
+
+          if (intervalHandler) {
+            clearInterval(intervalHandler);
+          }
+          intervalHandler = setInterval(reloadImage, reloadInterval);
+        }
+      });
+
+      div.appendChild(number);
+      div.appendChild(button);
+
+      return div;
+    })(),
     text: (() => {
       const div = document.createElement("div");
       const text = document.createElement("input");
@@ -448,7 +506,8 @@ let viewer = (function () {
       text.placeholder = "Text";
       const button = document.createElement("button");
       button.textContent = "Send";
-      button.addEventListener("click", function () {
+      button.addEventListener("click", function (event) {
+        event.preventDefault();
         delayedDisable(button, 2000);
         postInput({
           action: "text",
@@ -481,7 +540,8 @@ let viewer = (function () {
 
       const button = document.createElement("button");
       button.textContent = "Send";
-      button.addEventListener("click", function () {
+      button.addEventListener("click", function (event) {
+        event.preventDefault();
         delayedDisable(button, longpress.checked ? 2000 : 500);
         postInput({
           action: "keyevent",
@@ -516,7 +576,7 @@ let viewer = (function () {
 
       const response = await rawResponse.json();
 
-      if (debug) {
+      if (debuggingEnabled) {
         console.log(data, response);
       }
     } catch (error) {
@@ -547,18 +607,6 @@ let viewer = (function () {
         running = false;
         clearInterval(intervalHandler);
         intervalHandler = null;
-      }
-    },
-
-    setDebug: (value) => {
-      debug = value;
-    },
-
-    setReloadInterval: (value) => {
-      if (value > 100 && value < 2000) {
-        reloadInterval = value;
-        clearInterval(intervalHandler);
-        intervalHandler = setInterval(reloadImage, value);
       }
     },
 
