@@ -21,8 +21,12 @@ struct Args {
     connect_addr: String,
 
     /// The address to serve on (e.g., 127.0.0.1:3000)
-    #[arg(short, long, default_value = "127.0.0.1:3000")]
+    #[arg(short, long, default_value = "127.0.0.1:57321")]
     serve_addr: String,
+
+    /// The address to serve on (e.g., 127.0.0.1:3000)
+    #[arg(short, long, default_value = "127.0.0.1:64987")]
+    aq_addr: String,
 
     /// The device name to connect to
     #[arg(short, long, default_value = "")]
@@ -35,6 +39,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // initialize the AppState
     let app_state = Arc::new(models::AppState {
+        config: models::Config {
+            aq_addr: args.aq_addr.clone(),
+        },
         frame_storage: Mutex::new(None),
         stats_storage: Mutex::new(models::Stats {
             frame_count: 0,
@@ -50,6 +57,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Clone the shutdown notify for each task to avoid ownership issues
     let shutdown_signal_frame_reader = Arc::clone(&shutdown_notify);
     let shutdown_signal_server = Arc::clone(&shutdown_notify);
+
+    // ensure the minicap server is port forwarded
+    let mut adb_control = app_state.adb_control.lock().await;
+    let _ = adb_control.port_forward("tcp:1717", "localabstract:minicap");
+    drop(adb_control);
 
     // Spawn the frame reader task
     let frame_reader_state = app_state.clone();

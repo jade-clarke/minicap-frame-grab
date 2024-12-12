@@ -37,6 +37,37 @@ pub async fn start_server(
     Ok(())
 }
 
+// the response from the aq server seems to be common so we can create a function to handle the response
+// and return the response with the status of the aq server
+// if the response is an error, only respond with the status of down
+// if the response is a success, respond with the status of up and the response json merged with the status
+// this function will be used in the handle_request function
+fn handle_aq_response(response: Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>>) -> Result<Response<Body>, hyper::Error> {
+    // if the response is a status error responsd with the status of down
+    if response.is_err() {
+        let response_body = json!({
+            "status": "down",
+        })
+        .to_string();
+
+        return Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "application/json")
+            .body(Body::from(response_body))
+            .unwrap());
+    }
+
+    // add the status of up to the response
+    let mut response_json = response.unwrap();
+    response_json["status"] = json!("up");
+
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "application/json")
+        .body(Body::from(response_json.to_string()))
+        .unwrap())
+}
+
 async fn handle_request(
     req: Request<Body>,
     app_state: Arc<AppState>,
@@ -83,6 +114,16 @@ async fn handle_request(
                 .header("Content-Type", "application/json")
                 .body(Body::from(response_body))
                 .unwrap())
+        }
+        (&hyper::Method::GET, "/aq_status") => {
+            let endpoint = format!("http://{}{}", app_state.config.aq_addr, "/status");
+            let response = rust_utils::http_client_utils::http_fetch_json(&endpoint).await;
+            handle_aq_response(response)
+        }
+        (&hyper::Method::GET, "/aq_queues") => {
+            let endpoint = format!("http://{}{}", app_state.config.aq_addr, "/queues");
+            let response = rust_utils::http_client_utils::http_fetch_json(&endpoint).await;
+            handle_aq_response(response)
         }
         (&hyper::Method::GET, path) => {
             if let Some(content) = Asset::get(&path[1..]) {

@@ -1,5 +1,5 @@
 // Utility function for toggling a class
-const classToggle = (element, className) => {
+function classToggle (element, className) {
   if (element.classList.contains(className)) {
     element.classList.remove(className);
   } else {
@@ -8,8 +8,17 @@ const classToggle = (element, className) => {
 };
 
 // Utility function for clamping a number
-const clamp = (number, min, max) => {
+function clamp (number, min, max) {
   return Math.min(Math.max(number, min), max);
+};
+
+// Utility function for debouncing a function
+function debounce(func, delay) {
+  let timeoutId;
+  return function (...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  };
 };
 
 let viewer = (function () {
@@ -19,174 +28,31 @@ let viewer = (function () {
     status: "/status",
   };
 
-  const KEYMAP = {
-    ENTER: "KEYCODE_ENTER",
-    BACKSPACE: "KEYCODE_DEL",
-    DEL: "KEYCODE_FORWARD_DEL",
-    ARROW_LEFT: "KEYCODE_DPAD_LEFT",
-    ARROW_UP: "KEYCODE_DPAD_UP",
-    ARROW_RIGHT: "KEYCODE_DPAD_RIGHT",
-    ARROW_DOWN: "KEYCODE_DPAD_DOWN",
-    0: "KEYCODE_0",
-    1: "KEYCODE_1",
-    2: "KEYCODE_2",
-    3: "KEYCODE_3",
-    4: "KEYCODE_4",
-    5: "KEYCODE_5",
-    6: "KEYCODE_6",
-    7: "KEYCODE_7",
-    8: "KEYCODE_8",
-    9: "KEYCODE_9",
-    A: "KEYCODE_A",
-    B: "KEYCODE_B",
-    C: "KEYCODE_C",
-    D: "KEYCODE_D",
-    E: "KEYCODE_E",
-    F: "KEYCODE_F",
-    G: "KEYCODE_G",
-    H: "KEYCODE_H",
-    I: "KEYCODE_I",
-    J: "KEYCODE_J",
-    K: "KEYCODE_K",
-    L: "KEYCODE_L",
-    M: "KEYCODE_M",
-    N: "KEYCODE_N",
-    O: "KEYCODE_O",
-    P: "KEYCODE_P",
-    Q: "KEYCODE_Q",
-    R: "KEYCODE_R",
-    S: "KEYCODE_S",
-    T: "KEYCODE_T",
-    U: "KEYCODE_U",
-    V: "KEYCODE_V",
-    W: "KEYCODE_W",
-    X: "KEYCODE_X",
-    Y: "KEYCODE_Y",
-    Z: "KEYCODE_Z",
-    F1: "KEYCODE_F1",
-    F2: "KEYCODE_F2",
-    F3: "KEYCODE_F3",
-    F4: "KEYCODE_F4",
-    F5: "KEYCODE_F5",
-    F6: "KEYCODE_F6",
-    F7: "KEYCODE_F7",
-    F8: "KEYCODE_F8",
-    F9: "KEYCODE_F9",
-    F10: "KEYCODE_F10",
-    F11: "KEYCODE_F11",
-    F12: "KEYCODE_F12",
-    APOSTROPHE: "KEYCODE_APOSTROPHE",
-    APP_SWITCH: "KEYCODE_APP_SWITCH",
-    ASSIST: "KEYCODE_ASSIST",
-    AT: "KEYCODE_AT",
-    BACK: "KEYCODE_BACK",
-    BACKSLASH: "KEYCODE_BACKSLASH",
-    BREAK: "KEYCODE_BREAK",
-    BRIGHTNESS_DOWN: "KEYCODE_BRIGHTNESS_DOWN",
-    BRIGHTNESS_UP: "KEYCODE_BRIGHTNESS_UP",
-    CAPS_LOCK: "KEYCODE_CAPS_LOCK",
-    CLEAR: "KEYCODE_CLEAR",
-    COMMA: "KEYCODE_COMMA",
-    COPY: "KEYCODE_COPY",
-    CTRL_LEFT: "KEYCODE_CTRL_LEFT",
-    CTRL_RIGHT: "KEYCODE_CTRL_RIGHT",
-    CUT: "KEYCODE_CUT",
-    DPAD_CENTER: "KEYCODE_DPAD_CENTER",
-    DPAD_DOWN_LEFT: "KEYCODE_DPAD_DOWN_LEFT",
-    DPAD_DOWN_RIGHT: "KEYCODE_DPAD_DOWN_RIGHT",
-    DPAD_UP_LEFT: "KEYCODE_DPAD_UP_LEFT",
-    DPAD_UP_RIGHT: "KEYCODE_DPAD_UP_RIGHT",
-    EMOJI_PICKER: "KEYCODE_EMOJI_PICKER",
-    EQUALS: "KEYCODE_EQUALS",
-    ESCAPE: "KEYCODE_ESCAPE",
-    FOCUS: "KEYCODE_FOCUS",
-    FORWARD: "KEYCODE_FORWARD",
-    FUNCTION: "KEYCODE_FUNCTION",
-    GRAVE: "KEYCODE_GRAVE",
-    GUIDE: "KEYCODE_GUIDE",
-    HELP: "KEYCODE_HELP",
-    HENKAN: "KEYCODE_HENKAN",
-    HOME: "KEYCODE_HOME",
-    INFO: "KEYCODE_INFO",
-    INSERT: "KEYCODE_INSERT",
-    KANA: "KEYCODE_KANA",
-    KATAKANA_HIRAGANA: "KEYCODE_KATAKANA_HIRAGANA",
-    LANGUAGE_SWITCH: "KEYCODE_LANGUAGE_SWITCH",
-    LAST_CHANNEL: "KEYCODE_LAST_CHANNEL",
-    LEFT_BRACKET: "KEYCODE_LEFT_BRACKET",
-    MENU: "KEYCODE_MENU",
-    MINUS: "KEYCODE_MINUS",
-    MOVE_END: "KEYCODE_MOVE_END",
-    MOVE_HOME: "KEYCODE_MOVE_HOME",
-    MUHENKAN: "KEYCODE_MUHENKAN",
-    MUTE: "KEYCODE_MUTE",
-    NAVIGATE_IN: "KEYCODE_NAVIGATE_IN",
-    NAVIGATE_NEXT: "KEYCODE_NAVIGATE_NEXT",
-    NAVIGATE_OUT: "KEYCODE_NAVIGATE_OUT",
-    NAVIGATE_PREVIOUS: "KEYCODE_NAVIGATE_PREVIOUS",
-    NOTIFICATION: "KEYCODE_NOTIFICATION",
-    NUM: "KEYCODE_NUM",
-    NUMPAD_0: "KEYCODE_NUMPAD_0",
-    NUMPAD_1: "KEYCODE_NUMPAD_1",
-    NUMPAD_2: "KEYCODE_NUMPAD_2",
-    NUMPAD_3: "KEYCODE_NUMPAD_3",
-    NUMPAD_4: "KEYCODE_NUMPAD_4",
-    NUMPAD_5: "KEYCODE_NUMPAD_5",
-    NUMPAD_6: "KEYCODE_NUMPAD_6",
-    NUMPAD_7: "KEYCODE_NUMPAD_7",
-    NUMPAD_8: "KEYCODE_NUMPAD_8",
-    NUMPAD_9: "KEYCODE_NUMPAD_9",
-    NUMPAD_ADD: "KEYCODE_NUMPAD_ADD",
-    NUMPAD_COMMA: "KEYCODE_NUMPAD_COMMA",
-    NUMPAD_DIVIDE: "KEYCODE_NUMPAD_DIVIDE",
-    NUMPAD_DOT: "KEYCODE_NUMPAD_DOT",
-    NUMPAD_ENTER: "KEYCODE_NUMPAD_ENTER",
-    NUMPAD_EQUALS: "KEYCODE_NUMPAD_EQUALS",
-    NUMPAD_LEFT_PAREN: "KEYCODE_NUMPAD_LEFT_PAREN",
-    NUMPAD_MULTIPLY: "KEYCODE_NUMPAD_MULTIPLY",
-    NUMPAD_RIGHT_PAREN: "KEYCODE_NUMPAD_RIGHT_PAREN",
-    NUMPAD_SUBTRACT: "KEYCODE_NUMPAD_SUBTRACT",
-    NUM_LOCK: "KEYCODE_NUM_LOCK",
-    PAGE_DOWN: "KEYCODE_PAGE_DOWN",
-    PAGE_UP: "KEYCODE_PAGE_UP",
-    PASTE: "KEYCODE_PASTE",
-    PERIOD: "KEYCODE_PERIOD",
-    PICTSYMBOLS: "KEYCODE_PICTSYMBOLS",
-    PLUS: "KEYCODE_PLUS",
-    POUND: "KEYCODE_POUND",
-    POWER: "KEYCODE_POWER",
-    RECENT_APPS: "KEYCODE_RECENT_APPS",
-    REFRESH: "KEYCODE_REFRESH",
-    RIGHT_BRACKET: "KEYCODE_RIGHT_BRACKET",
-    RO: "KEYCODE_RO",
-    SCREENSHOT: "KEYCODE_SCREENSHOT",
-    SCROLL_LOCK: "KEYCODE_SCROLL_LOCK",
-    SEARCH: "KEYCODE_SEARCH",
-    SEMICOLON: "KEYCODE_SEMICOLON",
-    SETTINGS: "KEYCODE_SETTINGS",
-    SHIFT_LEFT: "KEYCODE_SHIFT_LEFT",
-    SHIFT_RIGHT: "KEYCODE_SHIFT_RIGHT",
-    SLASH: "KEYCODE_SLASH",
-    SLEEP: "KEYCODE_SLEEP",
-    SPACE: "KEYCODE_SPACE",
-    STAR: "KEYCODE_STAR",
-    SWITCH_CHARSET: "KEYCODE_SWITCH_CHARSET",
-    SYM: "KEYCODE_SYM",
-    SYSRQ: "KEYCODE_SYSRQ",
-    TAB: "KEYCODE_TAB",
-    THUMBS_DOWN: "KEYCODE_THUMBS_DOWN",
-    THUMBS_UP: "KEYCODE_THUMBS_UP",
-    VOICE_ASSIST: "KEYCODE_VOICE_ASSIST",
-    VOLUME_DOWN: "KEYCODE_VOLUME_DOWN",
-    VOLUME_MUTE: "KEYCODE_VOLUME_MUTE",
-    VOLUME_UP: "KEYCODE_VOLUME_UP",
-    WAKEUP: "KEYCODE_WAKEUP",
-    WINDOW: "KEYCODE_WINDOW",
-    YEN: "KEYCODE_YEN",
-    ZENKAKU_HANKAKU: "KEYCODE_ZENKAKU_HANKAKU",
-    ZOOM_IN: "KEYCODE_ZOOM_IN",
-    ZOOM_OUT: "KEYCODE_ZOOM_OUT",
-  };
+  const KEYMAP = (() => { 
+    const prefix = "KEYCODE_";
+    const prefixes = {
+      media: prefix + "MEDIA_",
+      numpad: prefix + "NUMPAD_",
+      function: prefix + "F",
+      dpad: prefix + "DPAD_",
+    }
+    const map = {};
+
+    // Letters
+    Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).forEach(char => { map[char] = prefix + char; });
+    // Numbers
+    Array.from({ length: 10 }, (_, i) => String(i)).forEach(num => { map[num] = prefix + num; });
+    // Function keys
+    Array.from({ length: 12 }, (_, i) => i + 1).forEach(num => { map["F" + num] = prefixes.function + num; });
+    // Numpad keys
+    [...Array.from({ length: 10 }, (_, i) => i),"ADD","COMMA","DIVIDE","DOT","ENTER","EQUALS","LEFT_PAREN","MULTIPLY","RIGHT_PAREN","SUBTRACT"].forEach((key, _) => { map[key] = prefixes.numpad + key; });
+    // Dpad keys
+    ["LEFT","UP","RIGHT","DOWN","CENTER","DOWN_LEFT","DOWN_RIGHT","UP_LEFT","UP_RIGHT"].forEach((key, _) => { map[key] = prefixes.dpad + key; });
+    // The rest
+    ["ENTER","DEL","FORWARD_DEL","APOSTROPHE","APP_SWITCH","ASSIST","AT","BACK","BACKSLASH","BREAK","BRIGHTNESS_DOWN","BRIGHTNESS_UP","CAPS_LOCK","CLEAR","COMMA","COPY","CTRL_LEFT","CTRL_RIGHT","CUT","EMOJI_PICKER","EQUALS","ESCAPE","FOCUS","FORWARD","FUNCTION","GRAVE","GUIDE","HELP","HENKAN","HOME","INFO","INSERT","KANA","KATAKANA_HIRAGANA","LANGUAGE_SWITCH","LAST_CHANNEL","LEFT_BRACKET","MENU","MINUS","MOVE_END","MOVE_HOME","MUHENKAN","MUTE","NAVIGATE_IN","NAVIGATE_NEXT","NAVIGATE_OUT","NAVIGATE_PREVIOUS","NOTIFICATION","NUM","NUM_LOCK","PAGE_DOWN","PAGE_UP","PASTE","PERIOD","PICTSYMBOLS","PLUS","POUND","POWER","RECENT_APPS","REFRESH","RIGHT_BRACKET","RO","SCREENSHOT","SCROLL_LOCK","SEARCH","SEMICOLON","SETTINGS","SHIFT_LEFT","SHIFT_RIGHT","SLASH","SLEEP","SPACE","STAR","SWITCH_CHARSET","SYM","SYSRQ","TAB","THUMBS_DOWN","THUMBS_UP","VOICE_ASSIST","VOLUME_DOWN","VOLUME_MUTE","VOLUME_UP","WAKEUP","WINDOW","YEN","ZENKAKU_HANKAKU","ZOOM_IN","ZOOM_OUT"].forEach((key, _) => { map[key] = prefix + key; });
+
+    return map;
+  })();
 
   const OPEN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200"><path d="M826.52 393.47H373.47c-18.402 0-33.309 14.918-33.309 33.309s14.906 33.309 33.309 33.309H826.5c18.402 0 33.309-14.918 33.309-33.309.004-18.391-14.902-33.309-33.293-33.309zM826.52 566.69H373.47c-18.402 0-33.309 14.918-33.309 33.309s14.906 33.309 33.309 33.309H826.5c18.402 0 33.309-14.918 33.309-33.309.004-18.391-14.902-33.309-33.293-33.309zM826.52 739.91H373.47c-18.402 0-33.309 14.906-33.309 33.309s14.906 33.309 33.309 33.309H826.5c18.402 0 33.309-14.918 33.309-33.309.004-18.391-14.902-33.309-33.293-33.309z"/><path d="M600 73.68C309.79 73.68 73.68 309.79 73.68 600S309.79 1126.32 600 1126.32 1126.32 890.21 1126.32 600 890.21 73.68 600 73.68m0 986.01c-253.48 0-459.69-206.21-459.69-459.69S346.52 140.31 600 140.31 1059.69 346.52 1059.69 600 853.48 1059.69 600 1059.69"/></svg>`;
   const CLOSE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" class="hidden" viewBox="0 0 1200 1200"><path d="M600 1126.3c290.68 0 526.32-235.64 526.32-526.32S890.68 73.66 600 73.66 73.68 309.3 73.68 599.98 309.32 1126.3 600 1126.3M358.18 379.5h483.64c19.641 0 35.559 15.93 35.559 35.559 0 19.641-15.914 35.559-35.559 35.559H358.18c-19.641 0-35.559-15.914-35.559-35.559.004-19.629 15.918-35.559 35.559-35.559m0 184.93h483.64c19.641 0 35.559 15.914 35.559 35.559 0 19.641-15.914 35.559-35.559 35.559H358.18c-19.641 0-35.559-15.914-35.559-35.559.004-19.641 15.918-35.559 35.559-35.559m0 184.91h483.64c19.641 0 35.559 15.914 35.559 35.559 0 19.641-15.914 35.559-35.559 35.559H358.18c-19.641 0-35.559-15.914-35.559-35.559.004-19.641 15.918-35.559 35.559-35.559"/></svg>`;
@@ -262,7 +128,9 @@ let viewer = (function () {
     canvas.addEventListener("pointerdown", canvasHandlePointerDown);
     canvas.addEventListener("pointerup", canvasHandlePointerUp);
     canvas.addEventListener("pointerout", canvasHandlePointerOut);
-    window.addEventListener("resize", resizeCanvas);
+
+    const debouncedResize = debounce(resizeCanvas, 200);
+    window.addEventListener('resize', debouncedResize);
 
     // Menu initialization
     menu_div = document.createElement("div");
@@ -617,10 +485,10 @@ let viewer = (function () {
   };
 
   const getPositionFromEvent = (event) => {
-    const rect = canvas.getBoundingClientRect();
+    const { left, top, width, height } = canvas.getBoundingClientRect();
     return {
-      x: Math.round(((event.clientX - rect.left) * img.width) / canvas.width),
-      y: Math.round(((event.clientY - rect.top) * img.height) / canvas.height),
+      x: Math.round(((event.clientX - left) / width) * img.width),
+      y: Math.round(((event.clientY - top) / height) * img.height)
     };
   };
 
