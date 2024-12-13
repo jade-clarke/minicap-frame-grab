@@ -146,17 +146,23 @@ async fn handle_request(
                     "queue": queue,
                     "iterations": iterations
                 });
-
+            
                 let endpoint = format!("http://{}{}", app_state.config.aq_addr, "/run");
-                let response = post::http_post_json(&endpoint, run_request.as_str().unwrap()).await;
-                handle_aq_response(response)
-            }
-            else {
+                if let Some(run_request_str) = run_request.as_str() {
+                    let response = post::http_post_json(&endpoint, run_request_str).await;
+                    handle_aq_response(response)
+                } else {
+                    return Ok(Response::builder()
+                        .status(StatusCode::BAD_REQUEST)
+                        .body(Body::from("Invalid JSON"))
+                        .unwrap());
+                }
+            } else {
                 return Ok(Response::builder()
                     .status(StatusCode::BAD_REQUEST)
                     .body(Body::from("Invalid JSON"))
                     .unwrap());
-            }            
+            }        
         }
         (&hyper::Method::GET, path) => {
             if let Some(content) = Asset::get(&path[1..]) {

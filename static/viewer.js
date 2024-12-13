@@ -617,7 +617,6 @@ let viewer = (function () {
         delayedDisable(button, 2000);
 
         let iterations = Number.parseInt(iteration_input.value, 10);
-
         await fetch(endpoint.queue_run, {
           method: "POST",
           headers: {
@@ -625,8 +624,8 @@ let viewer = (function () {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            queue: queue_select.value,
-            iterations: iterations,
+            "queue": queue_select.value,
+            "iterations": iterations,
           }),
         });
       });
