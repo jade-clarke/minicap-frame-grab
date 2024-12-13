@@ -148,15 +148,9 @@ async fn handle_request(
                 });
             
                 let endpoint = format!("http://{}{}", app_state.config.aq_addr, "/run");
-                if let Some(run_request_str) = run_request.as_str() {
-                    let response = post::http_post_json(&endpoint, run_request_str).await;
-                    handle_aq_response(response)
-                } else {
-                    return Ok(Response::builder()
-                        .status(StatusCode::BAD_REQUEST)
-                        .body(Body::from("Invalid JSON"))
-                        .unwrap());
-                }
+                let run_request_str = run_request.to_string();
+                let response = post::http_post_json(&endpoint, &run_request_str).await;
+                handle_aq_response(response)
             } else {
                 return Ok(Response::builder()
                     .status(StatusCode::BAD_REQUEST)
