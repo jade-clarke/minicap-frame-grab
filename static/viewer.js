@@ -620,7 +620,7 @@ let viewer = (function () {
         delayedDisable(run_button, 2000);
         delayedDisable(stop_button, 2000);
 
-        let iterations = Number.parseInt(iteration_input.value, 1);
+        let iterations = Number.parseInt(iteration_input.value, 10);
         await fetch(endpoint.queue_run, {
           method: "POST",
           headers: {
