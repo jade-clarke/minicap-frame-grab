@@ -1,16 +1,16 @@
 // Utility function for toggling a class
-function classToggle (element, className) {
+function classToggle(element, className) {
   if (element.classList.contains(className)) {
     element.classList.remove(className);
   } else {
     element.classList.add(className);
   }
-};
+}
 
 // Utility function for clamping a number
-function clamp (number, min, max) {
+function clamp(number, min, max) {
   return Math.min(Math.max(number, min), max);
-};
+}
 
 // Utility function for debouncing a function
 function debounce(func, delay) {
@@ -19,7 +19,7 @@ function debounce(func, delay) {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func.apply(this, args), delay);
   };
-};
+}
 
 let viewer = (function () {
   const endpoint = {
@@ -31,28 +31,154 @@ let viewer = (function () {
     queue_run: "http://localhost:64987/run",
   };
 
-  const KEYMAP = (() => { 
+  const KEYMAP = (() => {
     const prefix = "KEYCODE_";
     const prefixes = {
       media: prefix + "MEDIA_",
       numpad: prefix + "NUMPAD_",
       function: prefix + "F",
       dpad: prefix + "DPAD_",
-    }
+    };
     const map = {};
 
     // Letters
-    Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).forEach(char => { map[char] = prefix + char; });
+    Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).forEach(
+      (char) => {
+        map[char] = prefix + char;
+      }
+    );
     // Numbers
-    Array.from({ length: 10 }, (_, i) => String(i)).forEach(num => { map[num] = prefix + num; });
+    Array.from({ length: 10 }, (_, i) => String(i)).forEach((num) => {
+      map[num] = prefix + num;
+    });
     // Function keys
-    Array.from({ length: 12 }, (_, i) => i + 1).forEach(num => { map["F" + num] = prefixes.function + num; });
+    Array.from({ length: 12 }, (_, i) => i + 1).forEach((num) => {
+      map["F" + num] = prefixes.function + num;
+    });
     // Numpad keys
-    [...Array.from({ length: 10 }, (_, i) => i),"ADD","COMMA","DIVIDE","DOT","ENTER","EQUALS","LEFT_PAREN","MULTIPLY","RIGHT_PAREN","SUBTRACT"].forEach((key, _) => { map[key] = prefixes.numpad + key; });
+    [
+      ...Array.from({ length: 10 }, (_, i) => i),
+      "ADD",
+      "COMMA",
+      "DIVIDE",
+      "DOT",
+      "ENTER",
+      "EQUALS",
+      "LEFT_PAREN",
+      "MULTIPLY",
+      "RIGHT_PAREN",
+      "SUBTRACT",
+    ].forEach((key, _) => {
+      map[key] = prefixes.numpad + key;
+    });
     // Dpad keys
-    ["LEFT","UP","RIGHT","DOWN","CENTER","DOWN_LEFT","DOWN_RIGHT","UP_LEFT","UP_RIGHT"].forEach((key, _) => { map[key] = prefixes.dpad + key; });
+    [
+      "LEFT",
+      "UP",
+      "RIGHT",
+      "DOWN",
+      "CENTER",
+      "DOWN_LEFT",
+      "DOWN_RIGHT",
+      "UP_LEFT",
+      "UP_RIGHT",
+    ].forEach((key, _) => {
+      map[key] = prefixes.dpad + key;
+    });
     // The rest
-    ["ENTER","DEL","FORWARD_DEL","APOSTROPHE","APP_SWITCH","ASSIST","AT","BACK","BACKSLASH","BREAK","BRIGHTNESS_DOWN","BRIGHTNESS_UP","CAPS_LOCK","CLEAR","COMMA","COPY","CTRL_LEFT","CTRL_RIGHT","CUT","EMOJI_PICKER","EQUALS","ESCAPE","FOCUS","FORWARD","FUNCTION","GRAVE","GUIDE","HELP","HENKAN","HOME","INFO","INSERT","KANA","KATAKANA_HIRAGANA","LANGUAGE_SWITCH","LAST_CHANNEL","LEFT_BRACKET","MENU","MINUS","MOVE_END","MOVE_HOME","MUHENKAN","MUTE","NAVIGATE_IN","NAVIGATE_NEXT","NAVIGATE_OUT","NAVIGATE_PREVIOUS","NOTIFICATION","NUM","NUM_LOCK","PAGE_DOWN","PAGE_UP","PASTE","PERIOD","PICTSYMBOLS","PLUS","POUND","POWER","RECENT_APPS","REFRESH","RIGHT_BRACKET","RO","SCREENSHOT","SCROLL_LOCK","SEARCH","SEMICOLON","SETTINGS","SHIFT_LEFT","SHIFT_RIGHT","SLASH","SLEEP","SPACE","STAR","SWITCH_CHARSET","SYM","SYSRQ","TAB","THUMBS_DOWN","THUMBS_UP","VOICE_ASSIST","VOLUME_DOWN","VOLUME_MUTE","VOLUME_UP","WAKEUP","WINDOW","YEN","ZENKAKU_HANKAKU","ZOOM_IN","ZOOM_OUT"].forEach((key, _) => { map[key] = prefix + key; });
+    [
+      "ENTER",
+      "DEL",
+      "FORWARD_DEL",
+      "APOSTROPHE",
+      "APP_SWITCH",
+      "ASSIST",
+      "AT",
+      "BACK",
+      "BACKSLASH",
+      "BREAK",
+      "BRIGHTNESS_DOWN",
+      "BRIGHTNESS_UP",
+      "CAPS_LOCK",
+      "CLEAR",
+      "COMMA",
+      "COPY",
+      "CTRL_LEFT",
+      "CTRL_RIGHT",
+      "CUT",
+      "EMOJI_PICKER",
+      "EQUALS",
+      "ESCAPE",
+      "FOCUS",
+      "FORWARD",
+      "FUNCTION",
+      "GRAVE",
+      "GUIDE",
+      "HELP",
+      "HENKAN",
+      "HOME",
+      "INFO",
+      "INSERT",
+      "KANA",
+      "KATAKANA_HIRAGANA",
+      "LANGUAGE_SWITCH",
+      "LAST_CHANNEL",
+      "LEFT_BRACKET",
+      "MENU",
+      "MINUS",
+      "MOVE_END",
+      "MOVE_HOME",
+      "MUHENKAN",
+      "MUTE",
+      "NAVIGATE_IN",
+      "NAVIGATE_NEXT",
+      "NAVIGATE_OUT",
+      "NAVIGATE_PREVIOUS",
+      "NOTIFICATION",
+      "NUM",
+      "NUM_LOCK",
+      "PAGE_DOWN",
+      "PAGE_UP",
+      "PASTE",
+      "PERIOD",
+      "PICTSYMBOLS",
+      "PLUS",
+      "POUND",
+      "POWER",
+      "RECENT_APPS",
+      "REFRESH",
+      "RIGHT_BRACKET",
+      "RO",
+      "SCREENSHOT",
+      "SCROLL_LOCK",
+      "SEARCH",
+      "SEMICOLON",
+      "SETTINGS",
+      "SHIFT_LEFT",
+      "SHIFT_RIGHT",
+      "SLASH",
+      "SLEEP",
+      "SPACE",
+      "STAR",
+      "SWITCH_CHARSET",
+      "SYM",
+      "SYSRQ",
+      "TAB",
+      "THUMBS_DOWN",
+      "THUMBS_UP",
+      "VOICE_ASSIST",
+      "VOLUME_DOWN",
+      "VOLUME_MUTE",
+      "VOLUME_UP",
+      "WAKEUP",
+      "WINDOW",
+      "YEN",
+      "ZENKAKU_HANKAKU",
+      "ZOOM_IN",
+      "ZOOM_OUT",
+    ].forEach((key, _) => {
+      map[key] = prefix + key;
+    });
 
     return map;
   })();
@@ -133,7 +259,7 @@ let viewer = (function () {
     canvas.addEventListener("pointerout", canvasHandlePointerOut);
 
     const debouncedResize = debounce(resizeCanvas, 200);
-    window.addEventListener('resize', debouncedResize);
+    window.addEventListener("resize", debouncedResize);
 
     // Menu initialization
     menu_div = document.createElement("div");
@@ -461,20 +587,16 @@ let viewer = (function () {
       return div;
     })(),
     actions: (async () => {
-      const queues = [];
       const div = document.createElement("div");
 
-      const request = await fetch(endpoint.aq_queues).then((response) => response.json());
-      if (request.status === "up") {
-        queues.push(...request.queues);
-      }
-
       const queue_select = document.createElement("select");
-      queues.forEach((queue) => {
-        const option = document.createElement("option");
-        option.value = queue;
-        option.textContent = queue;
-        queue_select.appendChild(option);
+      fetch(endpoint.aq_queues).then((response) => {
+        const queues = [];
+        let queues_response = response.json();
+
+        if (queues_response.status === "up" && queues_response.queues) {
+          queues.push(...request.queues);
+        }
       });
 
       const iteration_input = document.createElement("input");
@@ -498,13 +620,13 @@ let viewer = (function () {
             Accept: "application/json",
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             queue: queue_select.value,
             iterations: iterations,
           }),
         });
       });
-      
+
       div.appendChild(queue_select);
       div.appendChild(iteration_input);
       div.appendChild(button);
@@ -542,7 +664,7 @@ let viewer = (function () {
     const { left, top, width, height } = canvas.getBoundingClientRect();
     return {
       x: Math.round(((event.clientX - left) / width) * img.width),
-      y: Math.round(((event.clientY - top) / height) * img.height)
+      y: Math.round(((event.clientY - top) / height) * img.height),
     };
   };
 
