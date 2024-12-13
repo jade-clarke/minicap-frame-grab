@@ -28,7 +28,7 @@ let viewer = (function () {
     status: "/status",
     aq_status: "/aq_status",
     aq_queues: "/aq_queues",
-    queue_run: "http://localhost:64987/run",
+    queue_run: "/aq_run",
   };
 
   const KEYMAP = (() => {
@@ -590,20 +590,17 @@ let viewer = (function () {
       const div = document.createElement("div");
 
       const queue_select = document.createElement("select");
-      fetch(endpoint.aq_queues).then((response) => {
-        const queues = [];
-        let queues_response = response.json();
+      fetch(endpoint.aq_queues).then(async (response) => {
+        let queues_response = await response.json();
 
-        if (queues_response.status === "up" && queues_response.queues) {
-          queues.push(...request.queues);
-        }
-
-        queues.forEach((queue) => {
+        if (queues_response.status === "up" && Array.isArray([queues_response.queues])) {
+        queues_response.queues.forEach((queue) => {
           const option = document.createElement("option");
           option.value = queue;
           option.textContent = queue;
           queue_select.appendChild(option);
         });
+        }
       });
 
       const iteration_input = document.createElement("input");
