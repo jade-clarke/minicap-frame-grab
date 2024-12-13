@@ -586,7 +586,7 @@ let viewer = (function () {
 
       return div;
     })(),
-    actions: (async () => {
+    actions: (() => {
       const div = document.createElement("div");
 
       const queue_select = document.createElement("select");
@@ -597,6 +597,13 @@ let viewer = (function () {
         if (queues_response.status === "up" && queues_response.queues) {
           queues.push(...request.queues);
         }
+
+        queues.forEach((queue) => {
+          const option = document.createElement("option");
+          option.value = queue;
+          option.textContent = queue;
+          queue_select.appendChild(option);
+        });
       });
 
       const iteration_input = document.createElement("input");
