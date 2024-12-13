@@ -1,6 +1,6 @@
 [package]
 name = "minicap-frame-grab"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 
 [dependencies]
@@ -14,4 +14,4 @@ clap = { version = "4", features = ["derive"] }
 rust-embed = "8.5.0"
 mime_guess = "2.0.5"
 adb_control = { git = "https://github.com/jade-clarke/adb_control", version = "0.4.2" }
-rust_utils = { git = "https://github.com/jade-clarke/rust_utils", version = "0.1.2", features = ["http_client"] }
+rust_utils = { git = "https://github.com/jade-clarke/rust_utils", version = "0.2.0", features = ["http_client"] }

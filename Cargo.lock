@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "minicap-frame-grab"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "adb_control",
  "bytes",
@@ -1601,8 +1601,8 @@ dependencies = [
 
 [[package]]
 name = "rust_utils"
-version = "0.1.2"
-source = "git+https://github.com/jade-clarke/rust_utils#c6adf7659d9c4b3b4e67e94f4683463e36cd7e36"
+version = "0.2.0"
+source = "git+https://github.com/jade-clarke/rust_utils#992d52168a2630bb14103a508ce31c37a7b88283"
 dependencies = [
  "bytes",
  "http-body-util",

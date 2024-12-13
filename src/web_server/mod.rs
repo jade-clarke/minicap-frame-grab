@@ -3,6 +3,7 @@ use hyper::{Body, Request, Response, Server, StatusCode};
 use serde_json::json;
 use std::error::Error;
 use std::sync::Arc;
+use rust_utils::http_client_utils::*;
 
 use crate::models::AppState;
 
@@ -117,13 +118,45 @@ async fn handle_request(
         }
         (&hyper::Method::GET, "/aq_status") => {
             let endpoint = format!("http://{}{}", app_state.config.aq_addr, "/status");
-            let response = rust_utils::http_client_utils::http_fetch_json(&endpoint).await;
+            let response = get::http_get_json(&endpoint).await;
             handle_aq_response(response)
         }
         (&hyper::Method::GET, "/aq_queues") => {
             let endpoint = format!("http://{}{}", app_state.config.aq_addr, "/queues");
-            let response = rust_utils::http_client_utils::http_fetch_json(&endpoint).await;
+            let response = get::http_get_json(&endpoint).await;
             handle_aq_response(response)
+        }
+        (&hyper::Method::POST, "/aq_run") => {
+            let body = hyper::body::to_bytes(req.into_body()).await?;
+            let body_str = std::str::from_utf8(&body).unwrap();
+            let json_body: serde_json::Value = serde_json::from_str(body_str).unwrap();
+
+            if !json_body.is_object() {
+                return Ok(Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .body(Body::from("Invalid JSON"))
+                    .unwrap());
+            }
+
+            if let (Some(queue), Some(iterations)) = (
+                json_body.get("queue").and_then(|x| x.as_str()),
+                json_body.get("iterations").and_then(|y| y.as_u64()),
+            ) {
+                let run_request = json!({
+                    "queue": queue,
+                    "iterations": iterations
+                });
+
+                let endpoint = format!("http://{}{}", app_state.config.aq_addr, "/run");
+                let response = post::http_post_json(&endpoint, run_request.as_str().unwrap()).await;
+                handle_aq_response(response)
+            }
+            else {
+                return Ok(Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .body(Body::from("Invalid JSON"))
+                    .unwrap());
+            }            
         }
         (&hyper::Method::GET, path) => {
             if let Some(content) = Asset::get(&path[1..]) {

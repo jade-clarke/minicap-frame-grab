@@ -26,6 +26,9 @@ let viewer = (function () {
     frame: "/frame",
     input: "/input",
     status: "/status",
+    aq_status: "/aq_status",
+    aq_queues: "/aq_queues",
+    queue_run: "http://localhost:64987/run",
   };
 
   const KEYMAP = (() => { 
@@ -453,6 +456,57 @@ let viewer = (function () {
       div.appendChild(key_select);
       longpress_label.appendChild(longpress);
       div.appendChild(longpress_label);
+      div.appendChild(button);
+
+      return div;
+    })(),
+    actions: (async () => {
+      const queues = [];
+      const div = document.createElement("div");
+
+      const request = await fetch(endpoint.aq_queues).then((response) => response.json());
+      if (request.status === "up") {
+        queues.push(...request.queues);
+      }
+
+      const queue_select = document.createElement("select");
+      queues.forEach((queue) => {
+        const option = document.createElement("option");
+        option.value = queue;
+        option.textContent = queue;
+        queue_select.appendChild(option);
+      });
+
+      const iteration_input = document.createElement("input");
+      iteration_input.type = "number";
+      iteration_input.min = 1;
+      iteration_input.max = 1000;
+      iteration_input.step = 10;
+      iteration_input.value = 1;
+
+      const button = document.createElement("button");
+      button.textContent = "Run";
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        delayedDisable(button, 2000);
+
+        let iterations = Number.parseInt(iteration_input.value, 10);
+
+        await fetch(endpoint.queue_run, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ 
+            queue: queue_select.value,
+            iterations: iterations,
+          }),
+        });
+      });
+      
+      div.appendChild(queue_select);
+      div.appendChild(iteration_input);
       div.appendChild(button);
 
       return div;
