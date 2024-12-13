@@ -126,6 +126,11 @@ async fn handle_request(
             let response = get::http_get_json(&endpoint).await;
             handle_aq_response(response)
         }
+        (&hyper::Method::POST, "/aq_stop") => {
+            let endpoint = format!("http://{}{}", app_state.config.aq_addr, "/stop");
+            let response = post::http_post_json(&endpoint, &"{}").await;
+            handle_aq_response(response)
+        }
         (&hyper::Method::POST, "/aq_run") => {
             let body = hyper::body::to_bytes(req.into_body()).await?;
             let body_str = std::str::from_utf8(&body).unwrap();

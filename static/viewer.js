@@ -29,6 +29,7 @@ let viewer = (function () {
     aq_status: "/aq_status",
     aq_queues: "/aq_queues",
     queue_run: "/aq_run",
+    queue_stop: "/aq_stop",
   };
 
   const KEYMAP = (() => {
@@ -610,13 +611,16 @@ let viewer = (function () {
       iteration_input.step = 10;
       iteration_input.value = 1;
 
-      const button = document.createElement("button");
-      button.textContent = "Run";
-      button.addEventListener("click", async (event) => {
-        event.preventDefault();
-        delayedDisable(button, 2000);
+      const run_button = document.createElement("button");
+      const stop_button = document.createElement("button");
 
-        let iterations = Number.parseInt(iteration_input.value, 10);
+      run_button.textContent = "Run";
+      run_button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        delayedDisable(run_button, 2000);
+        delayedDisable(stop_button, 2000);
+
+        let iterations = Number.parseInt(iteration_input.value, 1);
         await fetch(endpoint.queue_run, {
           method: "POST",
           headers: {
@@ -630,9 +634,25 @@ let viewer = (function () {
         });
       });
 
+      stop_button.textContent = "Stop";
+      stop_button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        delayedDisable(run_button, 2000);
+        delayedDisable(stop_button, 2000);
+
+        await fetch(endpoint.queue_stop, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        });
+      });
+
       div.appendChild(queue_select);
       div.appendChild(iteration_input);
-      div.appendChild(button);
+      div.appendChild(run_button);
+      div.appendChild(stop_button);
 
       return div;
     })(),
